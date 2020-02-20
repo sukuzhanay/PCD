@@ -1,0 +1,244 @@
+
+	package io.github.picodotdev.blogbitix.javaconcurrency.philosophers2;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Main {
+
+    private static Logger logger = LoggerFactory.getLogger(io.github.picodotdev.blogbitix.javaconcurrency.philosophers.Main.class);
+
+    public static void main(String[] args) throws Exception {
+        logger.info("Setuping dinner...");//Creamos la mesa con 5 comensales
+        Table table = new Table(5);
+        Thread dinner = new Thread(table);
+
+        logger.info("Starting dinner...");
+        dinner.start();
+        dinner.join();
+    }
+}
+
+Main.java
+
+	package io.github.picodotdev.blogbitix.javaconcurrency.philosophers2;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Table implements Runnable {
+// recorremos la lista de filósofos con un bucle for y filtramos para que esta sea mayor que 1.
+    private List<Fork> forks;
+    private List<Philosopher> philosophers;
+    private Iterator<Long> times;
+
+    public Table(int numPhilosophers) {
+        if (numPhilosophers < 2) {
+            throw new IllegalArgumentException("There should be more than one philosopher");
+        }
+
+        this.forks = new ArrayList<>();
+        this.philosophers = new ArrayList<>();
+        this.times = new Random().longs(2000, 7000).iterator();
+
+        for (int i = 0; i < numPhilosophers; ++i) {
+            Fork f = new Fork();
+            forks.add(f);
+        }
+        for (int i = 0; i < numPhilosophers; ++i) {
+            int n = (i + 1) % numPhilosophers;
+            Fork left = forks.get(i);
+            Fork right = forks.get(n);
+            boolean isLeftHanded = (n == 0);
+
+            Philosopher p = new Philosopher("Philosopher " + (i + 1),this, left, right, isLeftHanded);
+            philosophers.add(p);
+        }
+    }
+
+    public synchronized long getTime() {
+        return times.next();
+    }
+
+    public void run() {
+        ExecutorService executorService = Executors.newFixedThreadPool(philosophers.size());
+        for (Philosopher p : philosophers) {
+            executorService.submit(p);
+        }
+    }
+}
+
+Table.java
+
+	package io.github.picodotdev.blogbitix.javaconcurrency.philosophers2;
+
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Fork {
+// inicializamos las funciones de exclusión mutua para el algoritmo
+    private ReentrantLock lock;
+
+    public Fork() {
+        this.lock = new ReentrantLock();
+    }
+
+    public void take() {
+        lock.lock();
+    }
+
+    public void drop() {
+        if (!isHeld())
+            return;
+        lock.unlock();
+    }
+
+    public boolean isHeld() {
+        return lock.isHeldByCurrentThread();
+    }
+}
+Fork.java
+ 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+
+
+	package io.github.picodotdev.blogbitix.javaconcurrency.philosophers2;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class Philosopher implements Runnable {
+//funciones de tiempo limitado y se controlan los procesos que se están utilizando con las demás funciones creadas.
+    private static Logger logger = LoggerFactory.getLogger(Philosopher.class);
+
+    private String name;
+    private Table table;
+    private Fork right;
+    private Fork left;
+    private boolean isLeftHanded;
+
+    public Philosopher(String name, Table table, Fork left, Fork right, boolean isLeftHanded) {
+        this.name = name;
+        this.table = table;
+        this.right = right;
+        this.left = left;
+        this.isLeftHanded = isLeftHanded;
+    }
+
+    public void think() throws InterruptedException {
+        long time = table.getTime();
+        logger.info("{} thinking during {}ms", name, time);
+        spendTime(time);
+    }
+
+    public void eat() throws InterruptedException {
+        takeForks();
+        long time = table.getTime();
+        logger.info("{} eating during {}ms", name, time);
+        spendTime(time);
+        dropForks();
+    }
+    public void run() {
+        while (true) {
+            try {
+                think();
+                eat();
+            } catch (Exception e) {
+                logger.error(e.getMessage(), e);
+            }
+        }
+    }
+    private void takeForks() {
+        if (isLeftHanded) {
+            left.take();
+            right.take();
+        } else {
+            right.take();
+            left.take();
+        }
+    }
+ private void dropForks() {
+        if (isLeftHanded) {
+            left.drop();
+            right.drop();
+        } else {
+            right.drop();
+            left.drop();
+        }
+    }
+
+    private void spendTime(long time) throws InterruptedException {
+        Thread.sleep(time);
+    }
+}
