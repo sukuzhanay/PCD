@@ -1,0 +1,81 @@
+#include "rshmem.h"
+void incrementa (int *mem, int k){
+    int i;
+    i = *mem;
+    i = i+k;
+   TP TP TP TP
+   *mem = i;
+}
+int main () {
+    int * recurso;          /* Puntero al inicio de la zona de memoria compartida                           */
+    char * marcaFin;     /* Puntero al símbolo que nos indica si ha finalizado el hijo: 'x' o no: 'p'*/
+    int *n1;                  /* Orden del llegada del proceso padre a la sección crítica                     */
+    int *n2;                  /* Orden del llegada del proceso hijo a la sección crítica                        */
+    char *c1;                /* Variable de cerradura del proceso padre                                             */
+    char *c2;                /* Variable de cerradura del proceso hijo                                                */
+/* Crear zona de memoria compartida */
+   if ( !crearMemoria ())
+          fprintf (stderr, "Error de crear memoria\n");
+   recurso = (int *) memoria;
+   n1 = (int *) recurso + sizeof (int);
+   n2 = (int *) n1 + sizeof (int);
+   marcaFin = (char *) n2 + sizeof (int);
+   c1 = (char *) marcaFin + sizeof (char);
+   c2 = (char *) c1 + sizeof (char);
+   * marcaFin = 'p';
+   * n1 = 0;
+   * n2 = 0;
+   * c1 = 'T';  
+   * c2 =  'T';
+   /* proceso padre */
+    if ( 0!= fork ()) {  
+        int i;                                                
+ /* Variable contador de iteraciones                */
+        for ( i=0; i< 1000; i++) {
+                   TP TP TP                                 
+/* Tiempos de retardo                                     */
+                      /* Sección de entrada*/
+                   *c1 = 'F';                                   /* Quiere coger numero                                  */
+                   *n1 = (*n2) +1;                          /* Coge numero                                              */
+                   *c1 = 'T';                                   /* Se pone a la cola                                        */
+                   while ( *c2 != 'T');                      /* Espera a que el otro proceso coja número*/
+                   while ( *n2 !=0 && *n2 < *n1);   /* Espera hasta que sea su turno                  */
+              /*Sección crítica */
+                   incrementa ( recurso , 5);
+                 /* Sección de salida */ 
+                   TP TP TP                         
+   /* Tiempos de retardo                                     */
+                   *n1 =0;                                    
+             }
+             while ( *marcaFin != 'x');                  /* Espera al hijo si no ha acabado                  */
+             printf ("El recurso valia 0 y ahora vale %d \n", *recurso );
+  /* eliminar memoria compartida */
+             if ( !eliminarMemoria () )
+                      fprintf (stderr, "\nError en eliminar memoria \n"); 
+             exit (0);
+        } else {
+           /* proceso hijo */
+                  int i;                                
+  /* Variable contador de iteraciones                */
+                  for ( i=0; i<1000; i++) {
+                      TP TP TP                           
+  /* Tiempos de retardo                                     */
+                      *c2 = 'F';                                /* Quiere coger numero                                  */
+                      *n2 = (*n1) +1;                       /* Coge numero                                              */
+                      *c2 = 'T';                                /* Se pone a la cola                                        */
+                      while ( *c1!= 'T');                    /* Espera a que el otro proceso coja número*/
+                      while ( *n1!=0 && *n1 < *n2 );/* Espera hasta que sea su turno                  */
+                     /*seccion Critica* /
+                     incrementa( recurso, -5);
+
+                          /* Sección de salida */
+                      TP TP TP                      
+  /* Tiempos de retardo                                  */
+                      *n2 = 0;
+                  }
+                 * marcaFin = 'x';                                  
+  /* El hijo ha acabado                                  */
+                  exit (0);
+     } /* fin fork */
+
+} /* fin main */
