@@ -1,4 +1,4 @@
-#include "rshmem.h"
+#include "rshmem.h" // esta librería no está.
 void incrementa (int *mem, int k){
     int i;
     i = *mem;
